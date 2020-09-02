@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glasswall-test-deployment
+  labels:
+    app: glasswall-test
+spec:
+  replicas: 1
+  selector:
+   matchLabels:
+     app: glasswall-test
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: glasswall-test
+    spec:
+    containers:
+      - image: hub.localrepo.local/stage/glasswall-test
+        name: glasswall-test
+        envFrom:
+        - configMapRef:
+            name: glasswall-test-configmap
+        imagePullPolicy: Always
+        volumeMounts:
+         - name: localtime-vol
+           mountPath: /etc/localtime
+         - name: timezone-vol
+           mountPath: /etc/timezone
+         - name: NFS-vol-input
+           mountPath: /input
+         - name: NFS-vol-output
+           mountPath: /output
+        imagePullPolicy: Always
+      volumes:
+        - name: localtime-vol
+          hostPath:
+            path: /usr/share/zoneinfo/Asia/Tehran
+        - name: timezone-vol
+          hostPath:
+            path: /etc/timezone
+            type: File
+        - name: NFS-vol-input
+          hostPath:
+            path: /nfs/glasswall/input
+        - name: NFS-vol-output
+          hostPath:
+            path: /nfs/glasswall/output
