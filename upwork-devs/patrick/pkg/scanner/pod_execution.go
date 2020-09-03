@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,7 +16,7 @@ import (
 // TODO : Copy that file to a location where the pod can access it. we will use minio for a first test
 func (job Job) processFile(kubeClient client.Client, processSettings *ProcessSettings) {
 
-	log.Println("Processing file : " + job.Filename)
+	log.Info("Processing file : " + job.Filename)
 
 	task_id_str := strconv.Itoa(job.TaskID)
 
@@ -35,7 +34,8 @@ func (job Job) processFile(kubeClient client.Client, processSettings *ProcessSet
 	//We copy the source file to his processing folder
 	err := moveFileToProcessingFolder(from, to)
 	if err != nil {
-		log.Println("Could not copy the file, worker exiting without processing " + err.Error())
+		log.Error(err, "Could not copy the file, worker exiting without processing")
+		// TODO Notification about the failure
 		return
 	}
 
@@ -86,8 +86,10 @@ func (job Job) processFile(kubeClient client.Client, processSettings *ProcessSet
 
 	err = kubeClient.Create(context.Background(), pod)
 	if err != nil {
-		log.Println(err.Error())
+		log.Error(err, "Could not create the pod")
 	}
+
+	// TODO: check pod execution result and notify about the failure
 
 }
 

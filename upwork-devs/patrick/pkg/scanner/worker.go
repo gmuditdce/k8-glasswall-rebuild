@@ -1,8 +1,6 @@
 package scanner
 
 import (
-	"log"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,7 +29,7 @@ type Worker struct {
 //---------------------------------------------------
 
 func NewWorker(workerPool chan chan Job) Worker {
-	log.Println("init worker")
+	log.Info("init worker")
 	return Worker{
 		WorkerPool: workerPool,
 		JobChannel: make(chan Job),

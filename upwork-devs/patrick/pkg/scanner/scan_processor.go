@@ -2,8 +2,11 @@ package scanner
 
 import (
 	"io/ioutil"
-	"log"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("scan_processor")
 
 type ScanProcessor struct {
 	Batch          string
@@ -14,16 +17,17 @@ type ScanProcessor struct {
 
 func (s *ScanProcessor) ScanFiles() {
 
-	log.Println("Scan processor on folder " + s.Folder)
+	log.Info("Scan processor execution", "info", s)
 	files, err := ioutil.ReadDir(s.Folder)
 	if err != nil {
-		log.Println(err.Error())
+		log.Error(err, "Could not read the directory")
 	}
+
 	i := 1
 	for _, f := range files {
 		if !f.IsDir() {
-			log.Println("File found : " + f.Name())
 			job := Job{Filename: f.Name(), TaskID: i, Batch: s.Batch, ContainerImage: s.ContainerImage, Namespace: s.Namespace}
+			log.Info("Adding a new job to the queue", "info", job)
 			i = i + 1
 			JobQueue <- job
 		}

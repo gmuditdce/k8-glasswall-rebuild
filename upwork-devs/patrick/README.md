@@ -9,6 +9,57 @@ The worker pod is made of 2 containers :
 - Init container rebuilding the file
 - An additionnal container moving the output file to the storage engine
 
+## Controller flow
+
+![Controller flow diagram](controller-flow.png)
+
+Based on our last discussion during there call (i understand better the requirement), and i think we should have the controller to consume the files from a queue/topic, and also controls the result of pod execution in order to report it back on a queue/topic in order to be consumed.
+Savind state and sha signature of each file is also necessary in order to avoid duplicates. Will enhance the flow in that direction 
+
+## Build
+
+This project uses 3 docker images (They are already builded and pushed to dockerhub on my account - azopat. But you can build them as well and use your own images)
+- The main controller, which is this actual code. To build the image, run the command
+	- docker build -t <image_name> .
+
+- The image used to upload files to Minio
+	- cd minio
+	- docker build -t <minio_upload_image_name> .
+
+- The image is the glasswall rebuild engine
+	- We use another repo to build it so to build it you need to clone that repo first
+	- git clone https://github.com/filetrust/Glasswall-Rebuild-SDK-Evaluation.git /<rebuild_engine_clone_location>
+	- cp rebuild-engine/* /<rebuild_engine_clone_location>/Linux/
+	- cd <rebuild_engine_clone_location>/Linux
+	- docker build -t <rebuild_engine_image_name> .
+
+
+## How to Setup the solution
+**Local shared drive drive**
+
+- Create the Persistent volume : kubectl apply -f k8s/pv.yml (Make sure the path and hostname are valid in your environment)
+- Create the Persistent volume claim : kubectl apply -f k8s/pvc.yml
+
+**Minio**
+
+- Setup Minio following the procedure explained here : https://github.com/filetrust/k8-glasswall-rebuild/blob/master/upwork-devs/faisal-adnan/POC_Howto.md
+
+**Logging**
+
+- Setup Elastic for logging following the procedure explained here : https://github.com/filetrust/k8-traffic-generator/blob/master/upwork-devs/faisal-adnan/elk/HOWTO-ELK.md
+- You don't need to do anything else, beat is configured to scan all the containers logs in the cluster and push the logs to elastic. So once you do above setup and the pods are running, you are good to go.
+
+**Upload files**
+
+- Copy the files you want to rebuild the local share
+
+**Controller**
+
+- Verify the variables inside k8s/controller-dep.yml and adjust accordingly
+- Deploy the controller kubectl apply -f k8s/pvc.yml
+
+
+
 Pod List
 ----------
 ```
@@ -109,15 +160,22 @@ Duration  0hrs  0mins  0secs
 ```
 
 
-
 Minio Interface - we see the files processed
 ------
 
-![Glasswall Rebuild architecture overview](logs/folder_list.png)
+![Minio Folder List](logs/folder_list.png)
 
 
-![Glasswall Rebuild architecture overview](logs/folder.png)
+![Minio Folder](logs/folder.png)
 
 
-![Glasswall Rebuild architecture overview](logs/processed_file.png)
+![Processed files](logs/processed_file.png)
+
+
+Some Logs on elastic
+------
+
+![Elastic logs](logs/elastic1.png)
+
+![Elastic logs](logs/elastic.png)
 
