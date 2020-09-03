@@ -20,7 +20,7 @@ Savind state and sha signature of each file is also necessary in order to avoid 
 
 This project uses 3 docker images (They are already builded and pushed to dockerhub on my account - azopat. But you can build them as well and use your own images)
 - The main controller, which is this actual code. To build the image, run the command
-	- docker built -t <image_name> .
+	- docker build -t <image_name> .
 
 - The image used to upload files to Minio
 	- cd minio
