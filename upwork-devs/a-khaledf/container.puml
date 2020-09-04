@@ -1,0 +1,47 @@
+@startuml
+!include <c4/C4_Context.puml>
+!include <c4/C4_Container.puml>
+
+title Glass Wall Rebuild SDK Component Overview
+
+together {
+    Person(intelligence_agency, Intelligence Agency, "A client for the glasswall")
+    Person(government, Government, "A client for the glasswall")
+    Person(client, Client, "A client for the glasswall")
+}
+
+System(filesystem, "File System", "Files Storage")
+
+System_Boundary(c1, "Rebuild SDK") {
+    System_Boundary(c2, "Kubernetes") {
+        together {
+            Container(controller, Controller, "golang Pod", "Spawn Pod With each New File")
+            Container(minio, Minio, "File Storage", "Store Output after Processing Files")
+        }
+        Container(worker, worker, "golang pod", "Create a pristine Pod with new Files")
+        Container(uploader, Uploader, "golang pod", "Upload Processed Files")
+        together {
+            Container(file_hasher, File Hasher, "golang Pod", "Hash Files")
+            ContainerDb(redis, Redis, "Redis Key/Value Store", "Store Hashes for Processed Files")
+        }
+    }
+}
+
+Rel_Down(client, controller, "Download Files")
+Rel_Neighbor(government, controller, "Download Files")
+Rel_Down(intelligence_agency, controller, "Download Files")
+
+Rel(controller,  file_hasher, "Check Processed Files and Save Hashes", "http req")
+Rel_Back(file_hasher, controller, "file processed or not processed", "http res")
+Rel_Left(file_hasher,  redis, "Save files hashes", "redis")
+Rel_D(controller,  worker, "process files requests", "queue")
+Rel_Left(worker,  uploader, "Processed files output", "queue")
+
+Rel_Up(uploader, minio, "Uploads Processed files", "http")
+
+Rel_Down(client, filesystem, "Open Files")
+Rel_Down(government, filesystem, "Open Files")
+Rel_Down(intelligence_agency, filesystem, "Open Files")
+
+Rel_Right(minio, filesystem, "Saves Files")
+@enduml
