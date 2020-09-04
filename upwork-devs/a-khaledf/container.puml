@@ -1,5 +1,4 @@
 @startuml
-!include <c4/C4_Context.puml>
 !include <c4/C4_Container.puml>
 
 title Glass Wall Rebuild SDK Component Overview
