@@ -1,0 +1,24 @@
+@startuml
+!include <c4/C4_Context.puml>  
+
+title Glass Wall Rebuild SDK Context Overview
+
+together {
+    Person(intelligence_agency, Intelligence Agency, "A client for the glasswall")
+    Person(government, Government, "A client for the glasswall")
+    Person(client, Client, "A client for the glasswall")
+}
+
+System(rebuild_sdk, "Rebuild SDK", "creates safe files by rebuilding the original file into a new file")
+System(filesystem, "File System", "Files Storage")
+
+Rel_Down(client, rebuild_sdk, "Download Files")
+Rel_Down(government, rebuild_sdk, "Download Files")
+Rel_Down(intelligence_agency, rebuild_sdk, "Download Files")
+
+Rel(rebuild_sdk, filesystem, "rebuild and save file")
+
+Rel_Down(client, filesystem, "Open Files")
+Rel_Down(intelligence_agency, filesystem, "Open Files")
+
+@enduml
