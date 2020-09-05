@@ -4,6 +4,8 @@
 
 ![Glasswall Rebuild architecture overview](architecture.png)
 
+![Logging](logging.png)
+
 The worker pod is made of 2 containers :
 
 - Init container rebuilding the file
