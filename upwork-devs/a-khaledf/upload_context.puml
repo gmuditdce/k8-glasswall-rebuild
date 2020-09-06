@@ -1,18 +1,15 @@
 @startuml
 !include <c4/C4_Context.puml>  
 
-title Glass Wall CDR Context Overview
+title Glass Wall Upload Context Overview
 
 Person(client, Client, "A client for the glasswall")
 
 System(glasswall, "GlassWall CDR", "deep-File Inspection, Remediation and Sanitisation")
 System(website, "glasswall.com", "glass wall website")
 
-Rel_Down(client, glasswall, "Download / Upload Files")
+Rel_Down(client, glasswall, "Upload Files", 1)
 
-Rel_Back(client, glasswall, "Download Santizied Files")
-
-Rel(glasswall, website, "Upload Sanitized Files")
-Rel_Back(glasswall, website, "Requested Files")
+Rel(glasswall, website, "Upload Sanitisized File", 2)
 
 @enduml
