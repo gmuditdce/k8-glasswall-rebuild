@@ -13,7 +13,7 @@ Basically :
 ## Setup
 
 - Install argo workflows and argo events following official documentation
-- Setup argo events bus
+- Setup argo events bus : kubectl apply -n argo-events -f https://raw.githubusercontent.com/argoproj/argo-events/stable/examples/eventbus/native.yaml
 - Setup Minio event source. Example manifest is in this repo : minio-eventsource.yml
 - Setup Minio event sensor. Example manifest is in this repo : minio-event-sensor.yml (everything happens in the sensor, we can see that it will trigger the flow around line 35. and we are passing the notifications parameters to the flow. See from line 20)
 
