@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: minio
+  namespace: argo-events
+spec:
+  minio:
+    example:
+      accessKey:
+        key: accesskey
+        name: artifacts-minio
+      bucket:
+        name: input
+      endpoint: argo-events.argo-events:9000
+      events:
+      - s3:ObjectCreated:Put
+      insecure: true
+      secretKey:
+        key: secretkey
+        name: artifacts-minio
+  template:
+    metadata: {}

@@ -1,0 +1,101 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: glasswall-rebuild-
+spec:
+  entrypoint: file-processing
+  templates:
+  - name: file-processing
+    # Instead of just running a container
+    # This template has a sequence of steps
+    steps:
+    - - name: hasher            # checks the hash
+        template: hasher-template
+        arguments:
+          parameters:
+          - name: sourceFile
+            value: "PDF_with_javascript.pdf"
+    - - name: typechecker           # Checks if the type is ok
+        template: typechecker-template
+        arguments:
+          parameters:
+          - name: sourceFile
+            value: "PDF_with_javascript.pdf"
+    - - name: rebuild           # Checks if the type is ok
+        template: rebuild-template
+        arguments:
+          artifacts:
+          - name: sourceFile
+            from: "{{steps.hasher.outputs.artifacts.sourceFile}}"
+          parameters:
+          - name: sourceFile
+            value: "PDF_with_javascript.pdf"
+
+  - name: hasher-template
+    inputs:
+      parameters:
+      - name: sourceFile
+      artifacts:
+      - name: minio
+        path: /glasswallsource
+        s3:
+          endpoint: argo-artifacts.default.svc.cluster.local:9000
+          insecure: true
+          bucket: glasswallsource
+          key: pat
+          accessKeySecret:
+            name: other-minio-cred
+            key: accesskey
+          secretKeySecret:
+            name: other-minio-cred
+            key: secretkey
+    container:
+      image: alpine:latest
+      command: [sh, -c]
+      args: ["ls -al /glasswallsource"]
+    outputs:
+      artifacts:
+      - name: sourceFile
+        path: /glasswallsource/{{inputs.parameters.sourceFile}}
+
+  - name: typechecker-template
+    inputs:
+      parameters:
+      - name: sourceFile
+    script:
+      image: python:alpine3.6
+      command: [python]
+      source: |
+        s = "{{inputs.parameters.sourceFile}}"
+        result = "ok-to-rebuild" if s.endswith('.jpg') else "nok-to-rebuild" # This output can be used as condition for the next step
+        print(result)
+
+  - name: rebuild-template
+    inputs:
+      parameters:
+      - name: sourceFile
+      artifacts:
+      - name: sourceFile
+        path: /input/{{inputs.parameters.sourceFile}}
+    container:
+      image: azopat/gw-rebuild
+      env:
+      - name: INPUT_LOCATION
+        value: "/input"
+      - name: OUTPUT_LOCATION
+        value: "/rebuild/output"
+    outputs:
+      artifacts:
+      - name: fileRebuilded
+        path: /rebuild/output
+        s3:
+          endpoint: argo-artifacts.default.svc.cluster.local:9000
+          insecure: true
+          bucket: glasswalltarget
+          key: rebuild/{{inputs.parameters.sourceFile}}.tgz
+          accessKeySecret:
+            name: other-minio-cred
+            key: accesskey
+          secretKeySecret:
+            name: other-minio-cred
+            key: secretkey
