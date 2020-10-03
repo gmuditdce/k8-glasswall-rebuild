@@ -8,15 +8,15 @@ spec:
     example:
       accessKey:
         key: accesskey
-        name: artifacts-minio
-      bucket:
-        name: input
-      endpoint: argo-events.argo-events:9000
-      events:
-      - s3:ObjectCreated:Put
-      insecure: true
+        name: my-s3-credentials
       secretKey:
         key: secretkey
-        name: artifacts-minio
+        name: my-s3-credentials
+      bucket:
+        name: yarden
+      endpoint: play.min.io
+      insecure: true
+      events:
+        - s3:ObjectCreated:Put
   template:
     metadata: {}

@@ -5,130 +5,137 @@ metadata:
   namespace: argo-events
 spec:
   dependencies:
-  - eventName: example
-    eventSourceName: minio
-    name: test-dep
+    - eventName: example
+      eventSourceName: minio
+      name: dep
   template:
     metadata: {}
     serviceAccountName: argo-events-sa
   triggers:
-  - template:
-      k8s:
-        group: argoproj.io
-        operation: create
-        parameters:
-        - dest: spec.templates.0.steps.0.0.arguments.parameters.0.value
-          src:
-            dataKey: notification.0.s3.object.key
-            dependencyName: test-dep
-        - dest: spec.templates.0.steps.1.0.arguments.parameters.0.value
-          src:
-            dataKey: notification.0.s3.object.key
-            dependencyName: test-dep
-        - dest: spec.templates.0.steps.2.0.arguments.parameters.0.value
-          src:
-            dataKey: notification.0.s3.object.key
-            dependencyName: test-dep
-        resource: workflows
-        source:
-          resource:
-            apiVersion: argoproj.io/v1alpha1
-            kind: Workflow
-            metadata:
-              namespace: argo
-              generateName: glasswall-rebuild-
-            spec:
-              entrypoint: file-processing
-              templates:
-              - name: file-processing
-                steps:
-                - - name: hasher
-                    template: hasher-template
-                    arguments:
+    - template:
+        k8s:
+          group: argoproj.io
+          operation: create
+          parameters:
+            - src:
+                dataKey: notification.0.s3.object.key
+                dependencyName: dep
+              dest: spec.templates.0.steps.0.0.arguments.artifacts.0.s3.key
+            - src:
+                dataKey: notification.0.s3.object.key
+                dependencyName: dep
+              dest: spec.templates.0.steps.0.0.arguments.parameters.0.value
+              operation: append
+            - src:
+                dataKey: notification.0.s3.bucket.name
+                dependencyName: dep
+              dest: spec.templates.0.steps.0.0.arguments.artifacts.0.s3.bucket
+          resource: workflows
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                namespace: argo-events
+                generateName: local-rebuild-
+              spec:
+                entrypoint: runner
+                arguments:
+                  parameters:
+                    - name: imageRegistry
+                      value: docker.io
+                    - name: endpoint
+                      value: play.min.io
+                    - name: credentialsSecret
+                      value: my-s3-credentials
+                    - name: elasticsearchHost
+                      value: host.docker.internal
+                    - name: elasticsearchPort
+                      value: "9200"
+                    - name: elasticsearchIndex
+                      value: reports
+
+                templates:
+                  - name: runner
+                    steps:
+                      - - name: process
+                          template: processor
+                          arguments:
+                            parameters:
+                              - name: objectKey
+                                value:
+                            artifacts:
+                              - name: object
+                                s3:
+                                  endpoint: "{{workflow.parameters.endpoint}}"
+                                  bucket: will be replaced by notification
+                                  key: will be replaced by notification
+                                  accessKeySecret:
+                                    name: "{{workflow.parameters.credentialsSecret}}"
+                                    key: accesskey
+                                  secretKeySecret:
+                                    name: "{{workflow.parameters.credentialsSecret}}"
+                                    key: secretkey
+                      - - name: convert-report-to-json
+                          template: convertor
+                          arguments:
+                            artifacts:
+                              - name: xml-report
+                                from: "{{steps.process.outputs.artifacts.xml-report}}"
+                      - - name: report
+                          template: uploader
+                          arguments:
+                            artifacts:
+                              - name: json-report
+                                from: "{{steps.convert-report-to-json.outputs.artifacts.json-report}}"
+
+                  - name: processor
+                    inputs:
                       parameters:
-                      - name: sourceFile
-                        value: "glasswallsource/1.jpg"
-                - - name: typechecker 
-                    template: typechecker-template
-                    arguments:
-                      parameters:
-                      - name: sourceFile
-                        value: "glasswallsource/1.jpg"
-                - - name: rebuild 
-                    template: rebuild-template
-                    when: "{{steps.typechecker.outputs.result}} == ok"
-                    arguments:
+                        - name: objectKey
                       artifacts:
-                      - name: sourceFile
-                        from: "{{steps.hasher.outputs.artifacts.sourceFile}}"
-                      parameters:
-                      - name: sourceFile
-                        value: "glasswallsource/1.jpg"
-              - name: hasher-template
-                inputs:
-                  parameters:
-                  - name: sourceFile
-                  artifacts:
-                  - name: minio
-                    path: /glasswallsource
-                    s3:
-                      endpoint: argo-events.argo-events:9000
-                      insecure: true
-                      bucket: input
-                      key: glasswallsource
-                      accessKeySecret:
-                        name: my-minio-event-cred
-                        key: accesskey
-                      secretKeySecret:
-                        name: my-minio-event-cred
-                        key: secretkey
-                container:
-                  image: alpine:latest
-                  command: [sh, -c]
-                  args: ["ls -al /glasswallsource"]
-                outputs:
-                  artifacts:
-                  - name: sourceFile
-                    path: /{{inputs.parameters.sourceFile}}
-              - name: typechecker-template
-                inputs:
-                  parameters:
-                  - name: sourceFile
-                script:
-                  image: python:alpine3.6
-                  command: [python]
-                  source: |
-                    s = "{{inputs.parameters.sourceFile}}"
-                    result = "ok" if s.endswith('.jpg') or s.endswith('.pdf') else "nok" # This output can be used as condition for the next step
-                    print(result)
-              - name: rebuild-template
-                inputs:
-                  parameters:
-                  - name: sourceFile
-                  artifacts:
-                  - name: sourceFile
-                    path: /{{inputs.parameters.sourceFile}}
-                container:
-                  image: azopat/gw-rebuild
-                  env:
-                  - name: INPUT_LOCATION
-                    value: "/glasswallsource"
-                  - name: OUTPUT_LOCATION
-                    value: "/rebuild/output"
-                outputs:
-                  artifacts:
-                  - name: fileRebuilded
-                    path: /rebuild/output
-                    s3:
-                      endpoint: argo-events.argo-events:9000
-                      insecure: true
-                      bucket: output
-                      key: rebuild/{{inputs.parameters.sourceFile}}.tgz
-                      accessKeySecret:
-                        name: my-minio-event-cred
-                        key: accesskey
-                      secretKeySecret:
-                        name: my-minio-event-cred
-                        key: secretkey
-        version: v1alpha1
-      name: minio-workflow-trigger
+                        - name: object
+                          path: /input/{{inputs.parameters.objectKey}}
+                    container:
+                      image: "{{workflow.parameters.imageRegistry}}/yardenshoham/glasswall-rebuild-eval:process-mode-0"
+                    outputs:
+                      artifacts:
+                        - name: xml-report
+                          path: /output/Managed/
+
+                  - name: convertor
+                    inputs:
+                      artifacts:
+                        - name: xml-report
+                          path: /input/
+                    script:
+                      image: "{{workflow.parameters.imageRegistry}}/alpine/xml"
+                      workingDir: /input
+                      command: [sh]
+                      source: |
+                        #!/bin/sh
+                        set -e
+                        mkdir /output
+                        xq .< "$(ls)" >"/output/$(echo "$(ls)" | rev | cut -d"." -f2- | rev).json" 2>&1
+                    outputs:
+                      artifacts:
+                        - name: json-report
+                          path: /output/
+
+                  - name: uploader
+                    inputs:
+                      artifacts:
+                        - name: json-report
+                          path: /input/
+                    container:
+                      image: "{{workflow.parameters.imageRegistry}}/yardenshoham/local-rebuild-argo-uploader"
+                      env:
+                        - name: ELASTICSEARCH_HOST
+                          value: "{{workflow.parameters.elasticsearchHost}}"
+                        - name: ELASTICSEARCH_PORT
+                          value: "{{workflow.parameters.elasticsearchPort}}"
+                        - name: ELASTICSEARCH_INDEX
+                          value: "{{workflow.parameters.elasticsearchIndex}}"
+
+          version: v1alpha1
+        name: minio-workflow-trigger
