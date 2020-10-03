@@ -6,6 +6,8 @@ metadata:
 spec:
   minio:
     example:
+      endpoint: play.min.io
+      insecure: true
       accessKey:
         key: accesskey
         name: my-s3-credentials
@@ -14,8 +16,6 @@ spec:
         name: my-s3-credentials
       bucket:
         name: yarden
-      endpoint: play.min.io
-      insecure: true
       events:
         - s3:ObjectCreated:Put
   template:

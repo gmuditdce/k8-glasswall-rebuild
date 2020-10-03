@@ -30,6 +30,23 @@ kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/m
 kubectl apply -n argo-events -f https://raw.githubusercontent.com/argoproj/argo-events/stable/examples/eventbus/native.yaml
 ```
 
+Set parameters in `minio-event-sensor.yml`
+
+```yaml
+parameters:
+  # Set the same endpoint in minio-eventsource.yml
+  - name: endpoint
+    value: YOUR_MINIO_ENDPOINT
+  - name: elasticsearchHost
+    value: YOUR_ELASTICSEARCH_HOST
+```
+
+Supply the MinIO credentials
+
+```bash
+kubectl -n argo-events create secret generic my-s3-credentials --from-literal=accesskey=YOUR_ACCESS_KEY --from-literal=secretkey=YOUR_SECRET_KEY
+```
+
 Install the listener
 
 ```bash
