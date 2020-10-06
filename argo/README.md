@@ -35,16 +35,17 @@ Set parameters in `minio-event-sensor.yml`
 ```yaml
 parameters:
   # Set the same endpoint in minio-eventsource.yml
-  - name: endpoint
-    value: YOUR_MINIO_ENDPOINT
-  - name: elasticsearchHost
-    value: YOUR_ELASTICSEARCH_HOST
+  - name: inputEndpoint
+    value: YOUR_INPUT_MINIO_ENDPOINT
+  - name: outputEndpoint
+    value: YOUR_OUTPUT_MINIO_ENDPOINT
 ```
 
 Supply the MinIO credentials
 
 ```bash
-kubectl -n argo-events create secret generic my-s3-credentials --from-literal=accesskey=YOUR_ACCESS_KEY --from-literal=secretkey=YOUR_SECRET_KEY
+kubectl -n argo-events create secret generic my-input-credentials --from-literal=accesskey=YOUR_INPUT_ACCESS_KEY --from-literal=secretkey=YOUR_INPUT_SECRET_KEY
+kubectl -n argo-events create secret generic my-output-credentials --from-literal=accesskey=YOUR_OUTPUT_ACCESS_KEY --from-literal=secretkey=YOUR_OUTPUT_SECRET_KEY
 ```
 
 Install the listener
