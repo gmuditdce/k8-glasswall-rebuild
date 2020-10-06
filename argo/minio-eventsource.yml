@@ -10,10 +10,10 @@ spec:
       insecure: true
       accessKey:
         key: accesskey
-        name: my-s3-credentials
+        name: my-input-credentials
       secretKey:
         key: secretkey
-        name: my-s3-credentials
+        name: my-input-credentials
       bucket:
         name: yarden
       events:

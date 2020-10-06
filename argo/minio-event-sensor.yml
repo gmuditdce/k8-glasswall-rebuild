@@ -44,16 +44,16 @@ spec:
                   parameters:
                     - name: imageRegistry
                       value: docker.io
-                    - name: endpoint
+                    - name: inputEndpoint
                       value: play.min.io
-                    - name: credentialsSecret
-                      value: my-s3-credentials
-                    - name: elasticsearchHost
-                      value: host.docker.internal
-                    - name: elasticsearchPort
-                      value: "9200"
-                    - name: elasticsearchIndex
-                      value: reports
+                    - name: inputCredentialsSecret
+                      value: my-input-credentials
+                    - name: outputEndpoint
+                      value: play.min.io
+                    - name: outputCredentialsSecret
+                      value: my-output-credentials
+                    - name: outputBucket
+                      value: yarden-output
 
                 templates:
                   - name: runner
@@ -67,27 +67,15 @@ spec:
                             artifacts:
                               - name: object
                                 s3:
-                                  endpoint: "{{workflow.parameters.endpoint}}"
+                                  endpoint: "{{workflow.parameters.inputEndpoint}}"
                                   bucket: will be replaced by notification
                                   key: will be replaced by notification
                                   accessKeySecret:
-                                    name: "{{workflow.parameters.credentialsSecret}}"
+                                    name: "{{workflow.parameters.inputCredentialsSecret}}"
                                     key: accesskey
                                   secretKeySecret:
-                                    name: "{{workflow.parameters.credentialsSecret}}"
+                                    name: "{{workflow.parameters.inputCredentialsSecret}}"
                                     key: secretkey
-                      - - name: convert-report-to-json
-                          template: convertor
-                          arguments:
-                            artifacts:
-                              - name: xml-report
-                                from: "{{steps.process.outputs.artifacts.xml-report}}"
-                      - - name: report
-                          template: uploader
-                          arguments:
-                            artifacts:
-                              - name: json-report
-                                from: "{{steps.convert-report-to-json.outputs.artifacts.json-report}}"
 
                   - name: processor
                     inputs:
@@ -98,44 +86,23 @@ spec:
                           path: /input/{{inputs.parameters.objectKey}}
                     container:
                       image: "{{workflow.parameters.imageRegistry}}/yardenshoham/glasswall-rebuild-eval:process-mode-0"
+                      imagePullPolicy: Always
                     outputs:
                       artifacts:
                         - name: xml-report
                           path: /output/Managed/
-
-                  - name: convertor
-                    inputs:
-                      artifacts:
-                        - name: xml-report
-                          path: /input/
-                    script:
-                      image: "{{workflow.parameters.imageRegistry}}/alpine/xml"
-                      workingDir: /input
-                      command: [sh]
-                      source: |
-                        #!/bin/sh
-                        set -e
-                        mkdir /output
-                        xq .< "$(ls)" >"/output/$(echo "$(ls)" | rev | cut -d"." -f2- | rev).json" 2>&1
-                    outputs:
-                      artifacts:
-                        - name: json-report
-                          path: /output/
-
-                  - name: uploader
-                    inputs:
-                      artifacts:
-                        - name: json-report
-                          path: /input/
-                    container:
-                      image: "{{workflow.parameters.imageRegistry}}/yardenshoham/local-rebuild-argo-uploader"
-                      env:
-                        - name: ELASTICSEARCH_HOST
-                          value: "{{workflow.parameters.elasticsearchHost}}"
-                        - name: ELASTICSEARCH_PORT
-                          value: "{{workflow.parameters.elasticsearchPort}}"
-                        - name: ELASTICSEARCH_INDEX
-                          value: "{{workflow.parameters.elasticsearchIndex}}"
+                          archive:
+                            none: {}
+                          s3:
+                            endpoint: "{{workflow.parameters.outputEndpoint}}"
+                            bucket: "{{workflow.parameters.outputBucket}}"
+                            key: "{{inputs.parameters.objectKey}}.xml"
+                            accessKeySecret:
+                              name: "{{workflow.parameters.outputCredentialsSecret}}"
+                              key: accesskey
+                            secretKeySecret:
+                              name: "{{workflow.parameters.outputCredentialsSecret}}"
+                              key: secretkey
 
           version: v1alpha1
         name: minio-workflow-trigger
