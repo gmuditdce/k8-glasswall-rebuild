@@ -36,10 +36,19 @@ spec:
               apiVersion: argoproj.io/v1alpha1
               kind: Workflow
               metadata:
-                namespace: argo-events
+                namespace: argo
                 generateName: local-rebuild-
               spec:
                 entrypoint: runner
+                metrics:
+                  prometheus:
+                  - gauge:
+                      value: '{{workflow.duration}}'
+                    help: Duration gauge by name
+                    labels:
+                    - key: name
+                      value: '{{workflow.name}}'
+                    name: exec_duration_gauge
                 arguments:
                   parameters:
                     - name: imageRegistry
@@ -49,12 +58,11 @@ spec:
                     - name: inputCredentialsSecret
                       value: my-input-credentials
                     - name: outputEndpoint
-                      value: play.min.io
+                      value: s3.amazonaws.com
                     - name: outputCredentialsSecret
                       value: my-output-credentials
                     - name: outputBucket
                       value: yarden-output
-
                 templates:
                   - name: runner
                     steps:
