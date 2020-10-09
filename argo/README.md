@@ -51,7 +51,7 @@ kubectl -n argo-events create secret generic my-output-credentials --from-litera
 Install the listener
 
 ```bash
-kubectl apply -n argo-events -f minio-eventsource.yml -f minio-event-sensor.yml
+kubectl apply -f minio-eventsource.yml -f minio-event-sensor.yml
 ```
 
 ## Deploy prometheus for workflow metrics
