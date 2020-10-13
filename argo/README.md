@@ -43,9 +43,15 @@ parameters:
 
 Supply the MinIO credentials
 
+For the event source
 ```bash
 kubectl -n argo-events create secret generic my-input-credentials --from-literal=accesskey=YOUR_INPUT_ACCESS_KEY --from-literal=secretkey=YOUR_INPUT_SECRET_KEY
-kubectl -n argo-events create secret generic my-output-credentials --from-literal=accesskey=YOUR_OUTPUT_ACCESS_KEY --from-literal=secretkey=YOUR_OUTPUT_SECRET_KEY
+```
+
+For the workflow
+```bash
+kubectl -n argo create secret generic my-input-credentials --from-literal=accesskey=YOUR_INPUT_ACCESS_KEY --from-literal=secretkey=YOUR_INPUT_SECRET_KEY
+kubectl -n argo create secret generic my-output-credentials --from-literal=accesskey=YOUR_OUTPUT_ACCESS_KEY --from-literal=secretkey=YOUR_OUTPUT_SECRET_KEY
 ```
 
 Install the listener
