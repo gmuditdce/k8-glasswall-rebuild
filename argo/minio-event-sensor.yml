@@ -30,6 +30,19 @@ spec:
                 dataKey: notification.0.s3.bucket.name
                 dependencyName: dep
               dest: spec.templates.0.steps.0.0.arguments.artifacts.0.s3.bucket
+            - src:
+                dataKey: notification.0.s3.object.key
+                dependencyName: dep
+              dest: spec.templates.1.steps.0.0.arguments.parameters.0.value
+              operation: append
+            - src:
+                dataKey: notification.0.s3.object.key
+                dependencyName: dep
+              dest: spec.templates.1.steps.0.0.arguments.artifacts.0.s3.key
+            - src:
+                dataKey: notification.0.s3.bucket.name
+                dependencyName: dep
+              dest: spec.templates.1.steps.0.0.arguments.artifacts.0.s3.bucket
           resource: workflows
           source:
             resource:
@@ -40,6 +53,7 @@ spec:
                 generateName: local-rebuild-
               spec:
                 entrypoint: runner
+                onExit: exit-handler
                 metrics:
                   prometheus:
                   - gauge:
@@ -84,7 +98,26 @@ spec:
                                   secretKeySecret:
                                     name: "{{workflow.parameters.inputCredentialsSecret}}"
                                     key: secretkey
-
+                  - name: exit-handler
+                    steps:
+                      - - name: metadata
+                          template: metadata-generator
+                          arguments:
+                            parameters:
+                              - name: objectKey
+                                value:
+                          artifacts:
+                            - name: object
+                              s3:
+                                endpoint: '{{workflow.parameters.inputEndpoint}}'
+                                bucket: will be replaced by notification
+                                key: will be replaced by notification
+                                accessKeySecret:
+                                  key: accesskey
+                                  name: '{{workflow.parameters.inputCredentialsSecret}}'  
+                                secretKeySecret:
+                                  key: secretkey
+                                  name: '{{workflow.parameters.inputCredentialsSecret}}'     
                   - name: processor
                     inputs:
                       parameters:
@@ -111,6 +144,49 @@ spec:
                             secretKeySecret:
                               name: "{{workflow.parameters.outputCredentialsSecret}}"
                               key: secretkey
-
+                    - name: metadata-generator
+                      inputs:
+                        artifacts:
+                        - name: object
+                          path: /input/{{inputs.parameters.objectKey}}
+                        parameters:
+                        - name: objectKey
+                      script:
+                        image: python:alpine3.6
+                        command: [python]
+                        source: |
+                          import json
+                          import os
+                          from datetime import datetime
+                          now = datetime.now()
+                          creation_date = now.strftime("%m/%d/%Y, %H:%M:%S")
+                          workflow_name = "{{workflow.name}}"
+                          workflow_duration = "{{workflow.duration}}"
+                          filename = "/input/{{inputs.parameters.objectKey}}"
+                          size = os.path.getsize(filename)
+                          extension = os.path.splitext(filename)[1][1:].strip().lower()
+                          name = os.path.basename(filename)
+                          metadata_arr = {'size': size, 'name': name, 'workflow': workflow_name, 'duration': workflow_duration, 'extension': extension, 'creation_date': creation_date}
+                          metadata_json = json.dumps(metadata_arr)
+                          os.mkdir("/tmp/output")
+                          metadata_file = open("/tmp/output/metadata.json", "w")
+                          n = metadata_file.write(metadata_json)
+                          metadata_file.close()
+                      outputs:
+                        artifacts:
+                        - name: metadata
+                          archive:
+                            none: {}
+                          path: /tmp/output/
+                          s3:
+                            accessKeySecret:
+                              key: accesskey
+                              name: '{{workflow.parameters.outputCredentialsSecret}}'
+                            secretKeySecret:
+                              key: secretkey
+                              name: '{{workflow.parameters.outputCredentialsSecret}}'
+                            bucket: '{{workflow.parameters.outputBucket}}'
+                            endpoint: '{{workflow.parameters.outputEndpoint}}'
+                            key: '{{inputs.parameters.objectKey}}.xml'
           version: v1alpha1
         name: minio-workflow-trigger
