@@ -20,6 +20,7 @@ def upload_file_to_bucket(path, bucket, client):
 
 
 if __name__ == "__main__":
+    secure = os.getenv("SECURE")
     endpoint = os.getenv("ENDPOINT")
     access_key = os.getenv("ACCESS_KEY")
     secret_key = os.getenv("SECRET_KEY")
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     workers = os.getenv("WORKERS")
 
     client = Minio(endpoint=endpoint, access_key=access_key,
-                   secret_key=secret_key)
+                   secret_key=secret_key, secure=secure)
 
     try:
         client.make_bucket(bucket)
