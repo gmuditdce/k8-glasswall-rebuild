@@ -20,7 +20,7 @@ def upload_file_to_bucket(path, bucket, client):
 
 
 if __name__ == "__main__":
-    secure = os.getenv("SECURE")
+    secure = os.getenv("SECURE") == "True"
     endpoint = os.getenv("ENDPOINT")
     access_key = os.getenv("ACCESS_KEY")
     secret_key = os.getenv("SECRET_KEY")
@@ -44,5 +44,5 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=int(workers)) as executor:
         for path in paths:
             c = Minio(endpoint=endpoint, access_key=access_key,
-                      secret_key=secret_key)
+                      secret_key=secret_key, secure=secure)
             executor.submit(upload_file_to_bucket, path, bucket, c)
